@@ -1,11 +1,23 @@
 import gradio as gr
-initial_contacts = contacts = [
-    {"id": "1", "name": "John Smith", "phone": "555-1234", "email": "john@example.com", "address": "123 Main St"},
-    {"id": "2", "name": "Jane Doe", "phone": "555-5678", "email": "jane@example.com", "address": "456 Oak Ave"},
-    {"id": "3", "name": "Alex Johnson", "phone": "555-9012", "email": "alex@example.com", "address": "789 Pine Rd"},
-    {"id": "4", "name": "Sarah Williams", "phone": "555-3456", "email": "sarah@example.com", "address": "101 Maple Dr"},
-    {"id": "5", "name": "Jane Doe", "phone": "555-0000", "email": "jane2@example.com", "address": "999 Elm St"},
-]
+import os 
+import json
+CONTACTS_FILE="data.json"
+
+# Load contacts from JSON
+def load_contacts():
+    if os.path.exists(CONTACTS_FILE):
+        with open(CONTACTS_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+# Save contacts to JSON
+def save_contacts(contacts):
+    with open(CONTACTS_FILE, "w") as f:
+        json.dump(contacts, f, indent=2)
+
+
+
+
 
 def get_list_for_display(contacts):
   name_table = [[contact["name"]] for contact in contacts]
@@ -32,12 +44,15 @@ def modify_contact(name, phone, email, address, app_state):
         "email": email,
         "address": address
     }
-    app_state.get('contacts')[idx] = modified_contact    
+    app_state.get('contacts')[idx] = modified_contact        
+    save_contacts(app_state.get('contacts'))
+    
     return app_state
 
 
 def save_new_contact(name, phone, email, address, app_state):
-    new_id = str(max([int(c["id"]) for c in contacts] + [0]) + 1)
+  
+    new_id = str(max([int(c["id"]) for c in  app_state.get('contacts')] + [0]) + 1)
     new_contact = {
         "id": new_id,
         "name": name,
@@ -46,6 +61,10 @@ def save_new_contact(name, phone, email, address, app_state):
         "address": address
     }
     app_state.get('contacts').append(new_contact)    
+
+    # update file
+    save_contacts(app_state.get('contacts'))
+
     return '', '', '', '', gr.update(visible=False), app_state
 
 def delete_contact(app_state):
@@ -55,15 +74,17 @@ def delete_contact(app_state):
     app_state['contacts'].pop(idx)
     app_state['selected_index'] = -1
     
-    # After deletion, clear fields and reset selection
+    # update file
+    save_contacts(app_state.get('contacts'))
+    
     return app_state
 
-
+initial_contacts = load_contacts()
 
 with gr.Blocks() as app:
     app_state = gr.State({
       "selected_index": -1,
-      "contacts": contacts
+      "contacts": initial_contacts
     })  
 
     gr.Markdown("# Contact Manager")
@@ -112,6 +133,10 @@ with gr.Blocks() as app:
                 outputs=[app_state]
             )
 
+    def set_initial_contacts(app_state):
+        initial_contacts = load_contacts()
+        app_state['contacts'] = initial_contacts
+        return app_state
 
     def show_add_contact_dialog():
         return gr.update(visible=True)
@@ -162,5 +187,7 @@ with gr.Blocks() as app:
         inputs=[df_table, app_state],
         outputs=[contact_name, phone, email, address, app_state]  
     )
+
+    app.load(fn=set_initial_contacts, inputs=[app_state], outputs=[app_state])
 
 app.launch(debug=True)

@@ -29,7 +29,7 @@ def show_contact(dataframe, app_state, event: gr.SelectData):
     row_index = event.index[0]
     contact = app_state.get('contacts')[row_index]
     app_state['selected_index'] = row_index
-    return contact.get("name", ""), contact.get("phone", ""), contact.get("email", ""), contact.get("address", ""), app_state  
+    return app_state  
 
 def modify_contact(name, phone, email, address, app_state):
     selected_index = app_state.get('selected_index')
@@ -185,7 +185,7 @@ with gr.Blocks() as app:
     df_table.select(
         fn=show_contact,
         inputs=[df_table, app_state],
-        outputs=[contact_name, phone, email, address, app_state]  
+        outputs=[app_state]  
     )
 
     app.load(fn=set_initial_contacts, inputs=[app_state], outputs=[app_state])
